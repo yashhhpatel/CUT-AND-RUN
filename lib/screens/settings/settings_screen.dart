@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_services.dart';
@@ -19,13 +20,15 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final PurchaseService _purchases = AppScope.of(context).purchases;
-  String? _shownMessage;
+  bool _listening = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _purchases.removeListener(_onPurchase);
-    _purchases.addListener(_onPurchase);
+    if (!_listening) {
+      _listening = true;
+      _purchases.addListener(_onPurchase);
+    }
   }
 
   @override
@@ -35,16 +38,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _onPurchase() {
+    if (!mounted) return;
     final msg = _purchases.message;
-    if (msg != null && msg != _shownMessage && mounted) {
-      _shownMessage = msg;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (msg != null) {
       _purchases.clearMessage();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
     }
-    if (mounted) setState(() {});
+    setState(() {});
   }
 
-  Future<void> _openLink(String url, String title, String fallback) async {
+  void _snack(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _privacy() async {
+    const url = AppConfig.privacyPolicyUrl;
     if (url.isNotEmpty) {
       try {
         if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) return;
@@ -60,9 +72,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(title, style: AppText.title),
+              const Text('Privacy Policy', style: AppText.title),
               const SizedBox(height: 10),
-              Flexible(child: SingleChildScrollView(child: Text(fallback, style: AppText.body))),
+              const Flexible(child: SingleChildScrollView(child: Text(_privacyText, style: AppText.body))),
               const SizedBox(height: 16),
               GameButton(label: 'CLOSE', style: GameButtonStyle.secondary, onTap: () => Navigator.pop(context)),
             ],
@@ -74,15 +86,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _contact() async {
     const email = AppConfig.supportEmail;
-    if (email.isNotEmpty) {
-      try {
-        if (await launchUrl(Uri(scheme: 'mailto', path: email, query: 'subject=Cut%20%26%20Run%20support'))) return;
-      } catch (_) {}
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Support contact is available on our Google Play store listing.')),
-    );
+    final uri = Uri(scheme: 'mailto', path: email, query: 'subject=${Uri.encodeComponent('Cut & Run support')}');
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    // No email app installed: copy the address instead.
+    await Clipboard.setData(const ClipboardData(text: email));
+    if (mounted) _snack('No email app found. Address copied: $email');
   }
 
   Future<void> _rate() async {
@@ -94,26 +104,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await launchUrl(Uri.parse('https://play.google.com/store/apps/details?id=$pkg'),
           mode: LaunchMode.externalApplication);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the store.')));
-      }
+      if (mounted) _snack('Could not open Google Play.');
     }
   }
 
-  static const _privacyText =
-      'Cut & Run stores your progress, coins and settings only on this device. We do not run our own servers and do not collect personal information.\n\n'
-      'Ads are provided by Google AdMob, which may use device identifiers to show and measure ads according to your consent choices. '
-      'Purchases are processed by Google Play.\n\nYou can clear all game data at any time from Android Settings → Apps → Cut & Run → Storage.';
+  Future<void> _manageSubscription() async {
+    final uri = Uri.parse('https://play.google.com/store/account/subscriptions'
+        '?sku=${AppConfig.adsFreeMonthlyId}&package=${AppConfig.playStorePackage}');
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    if (mounted) _snack('Open Google Play → Payments & subscriptions to manage your plan.');
+  }
 
-  static const _termsText =
-      'Cut & Run is provided for personal entertainment. Virtual coins have no real-world value and cannot be exchanged for money. '
-      'The Remove Ads purchase is a one-time, non-consumable purchase that removes interstitial ads; optional rewarded ads remain available by choice.';
+  static const _privacyText =
+      'Cut & Run stores your progress, coins and settings only on this device. We do not run our own servers '
+      'and do not ask for your name, email or any account.\n\n'
+      'Ads are provided by Google AdMob, which may collect device identifiers (such as the advertising ID), IP '
+      'address and diagnostic information to show and measure ads, according to your consent choices.\n\n'
+      'Ads-Free packages are sold and processed by Google Play. We never see your payment details.\n\n'
+      'Questions: ${AppConfig.supportEmail}';
 
   @override
   Widget build(BuildContext context) {
-    final s = AppScope.of(context);
-    final settings = s.settings;
-    final busy = _purchases.state == PurchaseUiState.loading || _purchases.state == PurchaseUiState.pending;
+    final settings = AppScope.of(context).settings;
     return ScreenScaffold(
       title: 'Settings',
       showCoins: false,
@@ -139,43 +153,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Vibration',
                 value: settings.vibration,
                 onChanged: (v) => settings.vibration = v),
-            const _Section('PURCHASES'),
-            _Tile(
-              icon: Icons.block_rounded,
-              title: 'Remove Ads',
-              subtitle: _purchases.removeAds
-                  ? 'Purchased — thank you!'
-                  : (_purchases.price != null ? 'One-time purchase · ${_purchases.price}' : 'One-time purchase'),
-              trailing: _purchases.removeAds
-                  ? const Icon(Icons.check_circle_rounded, color: AppColors.success)
-                  : busy
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-              onTap: _purchases.removeAds || busy ? null : _purchases.buyRemoveAds,
+            const _Section('REMOVE ADS'),
+            _PlanCard(
+              plan: AdFreePlan.monthly,
+              purchases: _purchases,
+              subtitle: 'Auto-renews every month. Cancel anytime in Google Play.',
             ),
+            _PlanCard(
+              plan: AdFreePlan.lifetime,
+              purchases: _purchases,
+              subtitle: 'One-time payment. No forced ads, forever.',
+            ),
+            if (_purchases.monthlyActive && !_purchases.lifetimeOwned)
+              _Tile(
+                icon: Icons.manage_accounts_rounded,
+                title: 'Manage subscription',
+                subtitle: 'Cancel or change your plan in Google Play',
+                trailing: const Icon(Icons.open_in_new_rounded, color: AppColors.textMuted, size: 20),
+                onTap: _manageSubscription,
+              ),
             _Tile(
               icon: Icons.restore_rounded,
               title: 'Restore Purchases',
-              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-              onTap: busy ? null : _purchases.restore,
+              trailing: _purchases.state == PurchaseUiState.loading
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                  : const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+              onTap: _purchases.busy ? null : _purchases.restore,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
+              child: Text(
+                'Payments are handled by Google Play. Optional rewarded ads (continue, double coins) stay available by choice.',
+                style: AppText.muted.copyWith(fontSize: 12),
+              ),
             ),
             const _Section('ABOUT'),
             _Tile(
               icon: Icons.privacy_tip_rounded,
               title: 'Privacy Policy',
               trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-              onTap: () => _openLink(AppConfig.privacyPolicyUrl, 'Privacy Policy', _privacyText),
-            ),
-            _Tile(
-              icon: Icons.description_rounded,
-              title: 'Terms of Use',
-              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-              onTap: () => _openLink(AppConfig.termsUrl, 'Terms of Use', _termsText),
+              onTap: _privacy,
             ),
             _Tile(
               icon: Icons.mail_rounded,
               title: 'Contact Us',
-              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+              subtitleWidget: Semantics(
+                link: true,
+                label: 'Email ${AppConfig.supportEmail}',
+                child: Text(
+                  AppConfig.supportEmail,
+                  style: AppText.body.copyWith(
+                    fontSize: 13,
+                    color: AppColors.accent,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.accent,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              trailing: const Icon(Icons.open_in_new_rounded, color: AppColors.textMuted, size: 20),
               onTap: _contact,
             ),
             _Tile(
@@ -193,6 +230,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+/// One ads-free package with its Google Play price and buy / status button.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.plan, required this.purchases, required this.subtitle});
+
+  final AdFreePlan plan;
+  final PurchaseService purchases;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final lifetime = plan == AdFreePlan.lifetime;
+    final owned = purchases.owns(plan);
+    final coveredByLifetime = !lifetime && purchases.lifetimeOwned;
+    final color = lifetime ? AppColors.reward : AppColors.accent;
+    Widget action;
+    if (owned) {
+      action = _Badge(text: lifetime ? 'OWNED' : 'ACTIVE', color: AppColors.success);
+    } else if (coveredByLifetime) {
+      action = const _Badge(text: 'INCLUDED', color: AppColors.textMuted);
+    } else {
+      action = GameButton(
+        label: 'BUY',
+        style: lifetime ? GameButtonStyle.reward : GameButtonStyle.accent,
+        height: 40,
+        expand: false,
+        fontSize: 14,
+        onTap: purchases.busy ? null : () => purchases.buy(plan),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: owned ? AppColors.success : color.withOpacity(0.55), width: owned ? 2 : 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: color.withOpacity(0.16), borderRadius: BorderRadius.circular(14)),
+              child: Icon(lifetime ? Icons.all_inclusive_rounded : Icons.calendar_month_rounded, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(plan.title,
+                            style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (lifetime) ...[
+                        const SizedBox(width: 6),
+                        const _Badge(text: 'BEST VALUE', color: AppColors.reward, small: true),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    lifetime ? purchases.priceFor(plan) : '${purchases.priceFor(plan)} / month',
+                    style: AppText.section.copyWith(color: color, fontSize: 17),
+                  ),
+                  Text(subtitle, style: AppText.muted.copyWith(fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            action,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.text, required this.color, this.small = false});
+  final String text;
+  final Color color;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: small ? 6 : 10, vertical: small ? 2 : 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.7)),
+      ),
+      child: Text(text, style: AppText.label.copyWith(color: color, fontSize: small ? 9 : 11)),
+    );
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section(this.text);
   final String text;
@@ -205,10 +345,11 @@ class _Section extends StatelessWidget {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.icon, required this.title, this.subtitle, this.trailing, this.onTap});
+  const _Tile({required this.icon, required this.title, this.subtitle, this.subtitleWidget, this.trailing, this.onTap});
   final IconData icon;
   final String title;
   final String? subtitle;
+  final Widget? subtitleWidget;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -245,6 +386,7 @@ class _Tile extends StatelessWidget {
                     children: [
                       Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
                       if (subtitle != null) Text(subtitle!, style: AppText.muted.copyWith(fontSize: 12.5)),
+                      if (subtitleWidget != null) subtitleWidget!,
                     ],
                   ),
                 ),

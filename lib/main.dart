@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'app/app.dart';
 import 'app/app_services.dart';
@@ -40,7 +39,7 @@ Future<void> main() async {
   final storage = await StorageService.create();
   final settings = SettingsStore(storage);
   final progress = ProgressStore(storage);
-  final purchases = PurchaseService(storage, iap: InAppPurchase.instance);
+  final purchases = PurchaseService(storage);
   final audio = AudioService(settings);
   final services = AppServices(
     storage: storage,

@@ -20,7 +20,7 @@ class AdService {
   final PurchaseService _purchases;
   final bool enabled;
 
-  static const _kCompletedSinceAd = 'ads.completedSinceInterstitial';
+  late final InterstitialPacer pacer = InterstitialPacer(_storage);
 
   InterstitialAd? _interstitial;
   RewardedAd? _rewarded;
@@ -113,20 +113,15 @@ class AdService {
   /// Call when a level is completed and the player leaves the result screen.
   Future<void> maybeShowInterstitial({required int levelJustCompleted}) async {
     if (!enabled || _purchases.removeAds) return;
-    if (levelJustCompleted < AppConfig.interstitialMinLevel) return;
-    final count = _storage.getInt(_kCompletedSinceAd) + 1;
-    if (count < AppConfig.interstitialEveryNLevels) {
-      await _storage.setInt(_kCompletedSinceAd, count);
-      return;
-    }
+    if (!await pacer.registerCompletion()) return;
     final ad = _interstitial;
     if (ad == null) {
+      // Not loaded yet: stay due and try again after the next level.
       _loadInterstitial();
-      await _storage.setInt(_kCompletedSinceAd, count);
       return;
     }
     _interstitial = null;
-    await _storage.setInt(_kCompletedSinceAd, 0);
+    await pacer.reset();
     final closed = Completer<void>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (a) {
@@ -184,4 +179,26 @@ class AdService {
     _interstitial?.dispose();
     _rewarded?.dispose();
   }
+}
+
+/// Decides when an interstitial is due: after every
+/// [AppConfig.interstitialEveryNLevels] completed levels (3, 6, 9, ...).
+/// The count is persisted, so it carries over between sessions.
+class InterstitialPacer {
+  InterstitialPacer(this._storage);
+
+  final StorageService _storage;
+  static const _kCompletedSinceAd = 'ads.completedSinceInterstitial';
+
+  int get completedSinceAd => _storage.getInt(_kCompletedSinceAd);
+
+  /// Records a completed level. Returns true when an interstitial is due.
+  Future<bool> registerCompletion() async {
+    final count = completedSinceAd + 1;
+    await _storage.setInt(_kCompletedSinceAd, count);
+    return count >= AppConfig.interstitialEveryNLevels;
+  }
+
+  /// Call after an interstitial was actually shown.
+  Future<void> reset() => _storage.setInt(_kCompletedSinceAd, 0);
 }

@@ -105,12 +105,18 @@ void main() {
     await t.pumpWidget(wrap(s, const SettingsScreen()));
     await t.pump(const Duration(milliseconds: 300));
     expect(find.text('Music'), findsOneWidget);
-    expect(find.text('Remove Ads'), findsOneWidget);
-    expect(find.text('Restore Purchases'), findsOneWidget);
     await t.tap(find.text('Music'));
     await t.pump();
     expect(s.settings.music, isFalse);
     expect(s.storage.getBool('settings.music', true), isFalse);
+    expect(find.text('1 Month Ads-Free'), findsOneWidget);
+    expect(find.text('Lifetime Ads-Free'), findsOneWidget);
+    expect(find.text('₹299 / month'), findsOneWidget);
+    expect(find.text('₹2,999'), findsOneWidget);
+    expect(find.text('Terms of Use'), findsNothing);
+    await t.scrollUntilVisible(find.text('aakashmangukiya10@gmail.com'), 200);
+    expect(find.text('aakashmangukiya10@gmail.com'), findsOneWidget);
+    expect(find.text('Restore Purchases'), findsOneWidget);
   });
 
   testWidgets('gameplay screen runs, responds to input and pauses on back', (t) async {

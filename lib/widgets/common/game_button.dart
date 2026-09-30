@@ -128,13 +128,13 @@ class _GameButtonState extends State<GameButton> {
                       decoration: BoxDecoration(color: lip, borderRadius: BorderRadius.circular(18)),
                     ),
                   ),
-                AnimatedPositioned(
+                // Non-positioned so the button also sizes itself when it
+                // doesn't expand (e.g. inside a Row).
+                AnimatedPadding(
                   duration: const Duration(milliseconds: 70),
-                  left: 0,
-                  right: 0,
-                  top: _down ? lipH : 0,
-                  height: widget.height,
+                  padding: EdgeInsets.only(top: _down ? lipH : 0, bottom: _down ? 0 : lipH),
                   child: Container(
+                    height: widget.height,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
                       color: face,
@@ -148,7 +148,7 @@ class _GameButtonState extends State<GameButton> {
                               colors: [Color.lerp(face, Colors.white, 0.12)!, face],
                             ),
                     ),
-                    child: Center(child: content),
+                    child: Center(widthFactor: 1, child: content),
                   ),
                 ),
               ],

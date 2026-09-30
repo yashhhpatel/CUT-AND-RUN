@@ -36,8 +36,17 @@ tool/build_android.sh release
 No real IDs are committed. For release, pass:
 - `--dart-define=ADMOB_INTERSTITIAL_ID=...`, `--dart-define=ADMOB_REWARDED_ID=...`
 - `-PadmobAppId=ca-app-pub-...~...` (or `ADMOB_APP_ID` in `android/local.properties`)
-- `--dart-define=REMOVE_ADS_PRODUCT_ID=remove_ads` (create this non-consumable product in Play Console)
-- Optional: `PRIVACY_URL`, `TERMS_URL`, `SUPPORT_EMAIL`
+- Google Play Billing products (create in Play Console):
+  - Subscription `remove_ads_monthly`: 1 Month Ads-Free, monthly auto-renewing base plan, ₹299
+  - In-app product `remove_ads_lifetime`: Lifetime Ads-Free, one-time, ₹2,999
+  - Override IDs with `--dart-define=ADS_FREE_MONTHLY_ID=...` / `ADS_FREE_LIFETIME_ID=...`
+- `--dart-define=PRIVACY_URL=https://...` for the hosted privacy policy
+- Support email (Contact Us) is set in `lib/core/constants/app_config.dart`
 - Release signing: `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`), which is git-ignored.
 
 Debug builds use Google's public test ad units.
+
+### Ads
+- Interstitial after every 3 completed levels (3, 6, 9, ...), shown when leaving the result screen. Never during gameplay.
+- Rewarded (optional): continue after failing, and double coins on the result screen.
+- Either ads-free package disables interstitials. Rewarded ads stay available by choice.
