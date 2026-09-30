@@ -18,6 +18,9 @@ class GameViewport {
   double playerScreenY = 0;
   double cameraY = 0;
 
+  /// Screen position of the HUD shards counter (fly-to-HUD target).
+  Offset? hudShardsTarget;
+
   void resize(Size s) {
     size = s;
     scale = s.width / viewWidth;

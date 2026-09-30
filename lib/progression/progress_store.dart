@@ -46,6 +46,9 @@ class RunResult {
   final bool newBest;
   final String? failReason;
   bool doubled = false;
+
+  /// Daily missions completed by this run (filled in by the screen).
+  final List<String> missionsCompleted = [];
 }
 
 /// Player progression: levels, stars, coins, cosmetics, daily, endless,
@@ -273,7 +276,7 @@ class ProgressStore extends ChangeNotifier {
           if (run.collisions == 0) stats.noCollisionLevels++;
           coins += firstClear ? config.rewards.baseCoins : config.rewards.baseCoins ~/ 3;
           coins += math.max(0, stars - previousStars) * config.rewards.perStar;
-          coins += run.finalShards ~/ 4;
+          coins += (run.finalShards ~/ 4) * math.max(1, run.bonusMultiplier);
           if (stars > previousStars) _stars[config.levelId - 1] = stars;
           if (config.levelId >= _unlocked && config.levelId < kMaxLevel) _unlocked = config.levelId + 1;
           if (config.isTutorial) _tutorialDone = true;
@@ -285,7 +288,7 @@ class ProgressStore extends ChangeNotifier {
       case GameMode.daily:
         final today = now ?? DateTime.now();
         if (completed) {
-          coins += run.finalShards ~/ 4;
+          coins += (run.finalShards ~/ 4) * math.max(1, run.bonusMultiplier);
           if (!dailyDoneFor(today)) {
             final yesterday = DailyGenerator.keyFor(today.subtract(const Duration(days: 1)));
             _dailyStreak = _dailyLast == yesterday ? _dailyStreak + 1 : 1;

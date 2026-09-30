@@ -56,6 +56,7 @@ class GameWorld {
   final ParticleSystem particles = ParticleSystem();
   final List<FloatingText> texts = [];
   final List<FlyIn> flyIns = [];
+  final List<HudFly> hudFlies = [];
   final CameraRig camera = CameraRig();
   final CarryStack carry = CarryStack();
   final ComboSystem combo = ComboSystem();
@@ -79,6 +80,17 @@ class GameWorld {
   String? failReason;
   double statusTime = 0;
   bool usedContinue = false;
+
+  // Finish ladder: after the finish line, barriers ×2…×5 each cost shards.
+  static const double bonusStepLength = 150;
+  static const int bonusMaxMultiplier = 5;
+  bool inBonus = false;
+  int bonusMultiplier = 1;
+  double _celebration = 0;
+  double _finishSpeed = 0;
+
+  /// World y of the barrier that unlocks multiplier [k] (2..5).
+  double bonusStepY(int k) => config.pathLength + 130 + (k - 2) * bonusStepLength;
   double hitStop = 0;
   int bestMultiplier = 1;
   Mechanic? newMechanic;
@@ -124,7 +136,8 @@ class GameWorld {
     if (status != RunStatus.running) {
       statusTime += rdt;
       if (status == RunStatus.completed) {
-        player.update(rdt, speed * 0.7);
+        _finishSpeed *= math.exp(-3.5 * rdt);
+        player.update(rdt, _finishSpeed);
         _recordTrail();
         if (rng.nextDouble() < 0.5) {
           particles.emit(
@@ -147,6 +160,10 @@ class GameWorld {
     if (hitStop > 0) {
       hitStop -= rdt;
       scale = 0.07;
+    } else if (_celebration > 0) {
+      // Finish-line slow motion.
+      _celebration -= rdt;
+      scale = 0.32;
     } else {
       if (hasPower(PowerUpType.slowMotion)) scale = 0.55;
       if (tutorialSlow) scale = math.min(scale, 0.28);
@@ -196,7 +213,8 @@ class GameWorld {
     _cleanup();
     _updateEffects(rdt);
 
-    if (!config.isEndless && player.y >= config.pathLength) _complete();
+    if (!config.isEndless && !inBonus && player.y >= config.pathLength) _enterBonus();
+    if (inBonus && status == RunStatus.running) _bonusTick();
   }
 
   void _recordTrail() {
@@ -223,6 +241,10 @@ class GameWorld {
     }
     for (final g in gates) {
       if (g.flash > 0) g.flash = math.max(0, g.flash - dt * 2);
+    }
+    for (var i = hudFlies.length - 1; i >= 0; i--) {
+      hudFlies[i].t += dt * 1.5;
+      if (hudFlies[i].t >= 1) hudFlies.removeAt(i);
     }
   }
 
@@ -552,7 +574,13 @@ class GameWorld {
       g.flash = 1;
       final values = g.options.map(_gateValue).toList();
       final bestValue = values.reduce(math.max);
+      final before = carry.shards;
       final ok = _applyGate(g.options[idx], Offset(g.options[idx].center, g.y));
+      final delta = carry.shards - before;
+      if (delta != 0) {
+        hudFlies.add(HudFly(delta > 0 ? '+$delta' : '−${-delta}', Offset(g.options[idx].center, g.y),
+            delta > 0 ? AppColors.success : AppColors.danger));
+      }
       g.failed = !ok;
       stats.gatesPassed++;
       if (ok && values[idx] >= bestValue && values[idx] > 0 && g.options.length > 1) {
@@ -851,19 +879,89 @@ class GameWorld {
     decals.removeWhere((d) => d.pos.dy < behind - 100);
   }
 
-  void _complete() {
-    status = RunStatus.completed;
-    statusTime = 0;
+  /// Crossing the finish line: short slow-motion celebration, then the
+  /// runner spends shards to smash through the ×2…×5 bonus barriers.
+  void _enterBonus() {
+    inBonus = true;
     stats.shieldAtEnd = player.shields > 0;
     stats.finalShards = carry.shards;
     stats.score += carry.shards * 10;
     hint = null;
     tutorialSlow = false;
     cutter.reset();
-    camera.punch(0.03);
+    _celebration = 0.9;
+    camera.punch(0.04);
+    camera.addShake(3);
+    final at = Offset(player.x, player.y + 40);
+    floatText('FINISH!', at + const Offset(0, 60), AppColors.reward, big: true);
     for (var i = 0; i < 5; i++) {
-      particles.ring(Offset(player.x, player.y + 40), [AppColors.reward, AppColors.accent, AppColors.primary][i % 3],
+      particles.ring(at, [AppColors.reward, AppColors.accent, AppColors.primary][i % 3],
           size: 60.0 + i * 30, life: 0.5 + i * 0.1);
+    }
+    for (var i = 0; i < 4; i++) {
+      particles.emit(
+        at: Offset(40.0 + i * 107, player.y + 60),
+        color: [AppColors.primary, AppColors.accent, AppColors.reward, AppColors.success][i],
+        kind: ParticleKind.confetti,
+        count: 10,
+        speed: 260,
+        direction: 1.5708,
+        spread: 1.6,
+        life: 1.4,
+        size: 6,
+        drag: 1.5,
+      );
+    }
+    emit(GameEventType.finishLine);
+  }
+
+  void _bonusTick() {
+    final next = bonusMultiplier + 1;
+    if (next > bonusMaxMultiplier) {
+      _complete();
+      return;
+    }
+    final barrier = bonusStepY(next);
+    final cost = config.bonusStepCost;
+    if (player.y < barrier - 26) return;
+    if (carry.shards >= cost) {
+      carry.remove(cost);
+      bonusMultiplier = next;
+      final at = Offset(player.x, barrier);
+      hudFlies.add(HudFly('−$cost', at, AppColors.reward));
+      floatText('×$next', at + const Offset(0, 70), AppColors.reward, big: true);
+      particles.emit(
+          at: at, color: AppColors.reward, kind: ParticleKind.debris, count: 16, speed: 240, life: 0.6, size: 5);
+      particles.ring(at, AppColors.reward, size: 90, life: 0.4);
+      camera.addShake(2.5);
+      emit(GameEventType.bonusStep, next);
+      if (next == bonusMaxMultiplier) _complete();
+    } else {
+      // Not enough shards: the runner stops at this barrier.
+      player.y = barrier - 26;
+      _complete();
+    }
+  }
+
+  void _complete() {
+    status = RunStatus.completed;
+    statusTime = 0;
+    _finishSpeed = inBonus ? speed * 0.25 : speed * 0.6;
+    if (!inBonus) {
+      stats.shieldAtEnd = player.shields > 0;
+      stats.finalShards = carry.shards;
+      stats.score += carry.shards * 10;
+    }
+    stats.bonusMultiplier = bonusMultiplier;
+    stats.score += stats.finalShards * 10 * (bonusMultiplier - 1);
+    hint = null;
+    tutorialSlow = false;
+    cutter.reset();
+    camera.punch(0.03);
+    floatText('BONUS ×$bonusMultiplier', Offset(player.x, player.y + 110), AppColors.reward, big: true);
+    for (var i = 0; i < 3; i++) {
+      particles.ring(Offset(player.x, player.y + 40), [AppColors.reward, AppColors.accent, AppColors.primary][i],
+          size: 70.0 + i * 30, life: 0.5 + i * 0.1);
     }
     emit(GameEventType.complete);
   }

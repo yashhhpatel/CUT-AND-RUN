@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../progression/missions.dart';
 import '../progression/progress_store.dart';
 import '../services/ads/ad_service.dart';
 import '../services/audio/audio_service.dart';
@@ -19,6 +20,7 @@ class AppServices {
     required this.haptics,
     required this.ads,
     required this.purchases,
+    required this.missions,
   });
 
   final StorageService storage;
@@ -28,6 +30,7 @@ class AppServices {
   final HapticsService haptics;
   final AdService ads;
   final PurchaseService purchases;
+  final MissionStore missions;
 }
 
 class AppScope extends InheritedWidget {

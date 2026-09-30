@@ -149,6 +149,16 @@ class FloatingText {
   double age = 0;
 }
 
+/// A value label that flies from the world into the HUD shards counter
+/// (gate results, finish-ladder payments).
+class HudFly {
+  HudFly(this.text, this.from, this.color);
+  final String text;
+  final Offset from;
+  final Color color;
+  double t = 0;
+}
+
 /// Short-lived collected-piece ghost that flies into the player.
 class FlyIn {
   FlyIn(this.poly, this.color);

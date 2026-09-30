@@ -155,6 +155,38 @@ void main() {
     expect(w.stats.score, greaterThanOrEqualTo(70));
   });
 
+  test('finish ladder: shards buy ×2…×5 and set the bonus multiplier', () {
+    final w = GameWorld(level([], length: 500));
+    w.carry.shards = 21;
+    run(w, 12);
+    expect(w.status, RunStatus.completed);
+    expect(w.stats.finalShards, 21, reason: 'shards counted at the finish line');
+    expect(w.bonusMultiplier, 5);
+    expect(w.stats.bonusMultiplier, 5);
+    expect(w.carry.shards, 1, reason: '4 barriers × 5 shards paid');
+  });
+
+  test('finish ladder stops at the first barrier the player cannot afford', () {
+    final w = GameWorld(level([], length: 500));
+    w.carry.shards = 7;
+    run(w, 12);
+    expect(w.status, RunStatus.completed);
+    expect(w.stats.bonusMultiplier, 2);
+    final stoppedAt = w.player.y;
+    run(w, 2);
+    expect(w.player.y, lessThan(w.bonusStepY(3) + 30), reason: 'runner halts at the ×3 barrier');
+    expect(stoppedAt, lessThan(w.bonusStepY(3)));
+  });
+
+  test('gate results fly to the HUD', () {
+    final w = GameWorld(level([
+      GateSpawn(y: 300, options: [GateOption(x0: 0, x1: 400, type: GateType.add, value: 6)]),
+    ]));
+    run(w, 1.4);
+    expect(w.carry.shards, 6);
+    expect(w.hudFlies.map((f) => f.text), contains('+6'));
+  });
+
   test('tutorial never hard-fails on a collision', () {
     final w = GameWorld(level([const BodySpawn(y: 300, def: ObjectDefs.woodBlock, x: 200)], tutorial: true));
     run(w, 3);

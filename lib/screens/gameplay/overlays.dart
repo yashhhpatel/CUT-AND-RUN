@@ -253,6 +253,10 @@ class _ResultOverlayState extends State<ResultOverlay> with SingleTickerProvider
                 const SizedBox(height: 12),
                 _Objectives(result: r),
                 const SizedBox(height: 12),
+                if (r.completed && !cfg.isEndless) ...[
+                  _BonusLadderRow(multiplier: s.bonusMultiplier),
+                  const SizedBox(height: 10),
+                ],
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   decoration: BoxDecoration(
@@ -298,6 +302,17 @@ class _ResultOverlayState extends State<ResultOverlay> with SingleTickerProvider
                       ),
                     ),
                 ],
+                for (final m in r.missionsCompleted)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.task_alt_rounded, color: AppColors.accent, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text('Mission complete: $m', style: AppText.body.copyWith(fontSize: 13))),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 18),
                 if (widget.onNext != null) ...[
                   GameButton(
@@ -327,6 +342,47 @@ class _ResultOverlayState extends State<ResultOverlay> with SingleTickerProvider
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// ×1 … ×5 finish-ladder result, with the reached step highlighted.
+class _BonusLadderRow extends StatelessWidget {
+  const _BonusLadderRow({required this.multiplier});
+  final int multiplier;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Finish bonus times $multiplier',
+      child: Row(
+        children: [
+          Text('FINISH BONUS', style: AppText.label.copyWith(fontSize: 11)),
+          const SizedBox(width: 10),
+          for (var k = 1; k <= 5; k++)
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: k <= multiplier
+                      ? AppColors.reward.withOpacity(k == multiplier ? 1 : 0.35)
+                      : AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '×$k',
+                  style: AppText.label.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: k == multiplier ? const Color(0xFF3A2A00) : AppColors.text,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

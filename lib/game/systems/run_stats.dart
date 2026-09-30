@@ -26,4 +26,7 @@ class RunStats {
   double time = 0;
   bool shieldAtEnd = false;
   int finalShards = 0;
+
+  /// Finish-ladder multiplier reached (1..5).
+  int bonusMultiplier = 1;
 }

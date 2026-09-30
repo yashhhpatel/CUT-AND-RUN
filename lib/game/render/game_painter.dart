@@ -87,7 +87,9 @@ class GamePainter extends CustomPainter {
     _gateLabels(canvas);
     _bodyGlyphs(canvas);
     _decals(canvas);
+    _ladderLabels(canvas);
     _floatingTexts(canvas);
+    _hudFlies(canvas);
     canvas.restore();
 
     _ambient(canvas, size);
@@ -188,6 +190,41 @@ class GamePainter extends CustomPainter {
         canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(-16, fy - 10, 16, 60), const Radius.circular(4)), _fill);
         canvas.drawRRect(
             RRect.fromRectAndRadius(Rect.fromLTWH(kTrackWidth, fy - 10, 16, 60), const Radius.circular(4)), _fill);
+      }
+      _bonusLadder(canvas, y0, y1);
+    }
+  }
+
+  static const _ladderColors = [AppColors.success, AppColors.accent, AppColors.warning, AppColors.reward];
+
+  /// Finish ladder: glowing zones and breakable barriers ×2…×5.
+  void _bonusLadder(Canvas canvas, double y0, double y1) {
+    for (var k = 2; k <= GameWorld.bonusMaxMultiplier; k++) {
+      final by = world.bonusStepY(k);
+      if (by < y0 - 200 || by > y1 + 60) continue;
+      final color = _ladderColors[k - 2];
+      final zoneEnd = k < GameWorld.bonusMaxMultiplier ? world.bonusStepY(k + 1) : by + GameWorld.bonusStepLength;
+      _fill.color = color.withOpacity(0.08);
+      canvas.drawRect(Rect.fromLTRB(0, by, kTrackWidth, zoneEnd), _fill);
+      final broken = world.bonusMultiplier >= k;
+      final r = Rect.fromLTRB(4, by - 12, kTrackWidth - 4, by + 12);
+      if (broken) {
+        _stroke
+          ..color = color.withOpacity(0.35)
+          ..strokeWidth = 2;
+        canvas.drawLine(Offset(0, by), Offset(kTrackWidth, by), _stroke);
+      } else {
+        final pulse = 0.7 + 0.3 * math.sin(t * 5 + k);
+        _fill.color = color.withOpacity(0.3 * pulse);
+        canvas.drawRRect(RRect.fromRectAndRadius(r.inflate(5), const Radius.circular(10)), _fill);
+        _fill.color = color.withOpacity(0.85);
+        canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(8)), _fill);
+        _stroke
+          ..color = Colors.white.withOpacity(0.35)
+          ..strokeWidth = 3;
+        for (var x = 20.0; x < kTrackWidth; x += 40) {
+          canvas.drawLine(Offset(x, by - 9), Offset(x + 14, by + 9), _stroke);
+        }
       }
     }
   }
@@ -514,7 +551,24 @@ class GamePainter extends CustomPainter {
         final color = _gateColor(o);
         final dim = g.resolved && g.chosen != i;
         final r = Rect.fromLTRB(o.x0 + 4, g.y - 28, o.x1 - 4, g.y + 28);
-        _fill.color = color.withOpacity(dim ? 0.08 : 0.22 + (g.chosen == i ? g.flash * 0.5 : 0));
+        if (g.resolved && g.chosen == i) {
+          // Chosen gate opens: two panels slide apart and fade.
+          final open = Curves.easeOutCubic.transform(1 - g.flash);
+          final half = r.width / 2;
+          final a = (1 - open).clamp(0.0, 1.0);
+          for (final dir in [-1.0, 1.0]) {
+            final panel = Rect.fromLTWH(dir < 0 ? r.left : r.center.dx, r.top, half, r.height)
+                .shift(Offset(dir * half * 0.9 * open, 0));
+            _fill.color = color.withOpacity(0.45 * a);
+            canvas.drawRRect(RRect.fromRectAndRadius(panel, const Radius.circular(8)), _fill);
+            _stroke
+              ..color = color.withOpacity(a)
+              ..strokeWidth = 3;
+            canvas.drawRRect(RRect.fromRectAndRadius(panel, const Radius.circular(8)), _stroke);
+          }
+          continue;
+        }
+        _fill.color = color.withOpacity(dim ? 0.08 : 0.22);
         canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(10)), _fill);
         _stroke
           ..color = color.withOpacity(dim ? 0.25 : 0.9)
@@ -539,6 +593,7 @@ class GamePainter extends CustomPainter {
       for (var i = 0; i < g.options.length; i++) {
         final o = g.options[i];
         final dim = g.resolved && g.chosen != i;
+        if (g.resolved && g.chosen == i) continue; // its value flies to the HUD
         final p = viewport.toScreen(Offset(o.center, g.y));
         final color = dim ? AppColors.textFaint : Colors.white;
         _text(canvas, o.label, p + Offset(0, o.subLabel == null ? 0 : -7), color, 19 * viewport.scale / 2.4,
@@ -916,6 +971,43 @@ class GamePainter extends CustomPainter {
           ..strokeWidth = 3.5;
         canvas.drawCircle(c, 18, _stroke);
       }
+    }
+  }
+
+  void _ladderLabels(Canvas canvas) {
+    if (world.config.isEndless) return;
+    final s = viewport.scale / 2.4;
+    for (var k = 2; k <= GameWorld.bonusMaxMultiplier; k++) {
+      final by = world.bonusStepY(k);
+      if (by < _yMin - 100 || by > _yMax) continue;
+      final zoneMid = by + GameWorld.bonusStepLength / 2;
+      _text(canvas, '×$k', viewport.toScreen(Offset(kTrackWidth / 2, zoneMid)), _ladderColors[k - 2].withOpacity(0.9),
+          34 * s,
+          weight: FontWeight.w900);
+      if (world.bonusMultiplier < k) {
+        _text(canvas, '−${world.config.bonusStepCost}', viewport.toScreen(Offset(kTrackWidth / 2, by)),
+            const Color(0xFF1A1400), 15 * s,
+            weight: FontWeight.w900);
+      }
+    }
+    final fy = world.config.pathLength + 65;
+    if (fy > _yMin && fy < _yMax) {
+      _text(canvas, '×1', viewport.toScreen(Offset(kTrackWidth / 2, fy)), Colors.white.withOpacity(0.7), 24 * s,
+          weight: FontWeight.w900);
+    }
+  }
+
+  void _hudFlies(Canvas canvas) {
+    final target = viewport.hudShardsTarget;
+    for (final f in world.hudFlies) {
+      final start = viewport.toScreen(f.from);
+      final end = target ?? Offset(viewport.size.width - 90, 40);
+      final k = Curves.easeInCubic.transform(f.t.clamp(0.0, 1.0));
+      // Arc upwards on the way to the counter.
+      final pos = Offset.lerp(start, end, k)! + Offset(0, -60 * (1 - (2 * k - 1) * (2 * k - 1)));
+      final size = (26 - 12 * k) * viewport.scale / 2.4;
+      _text(canvas, f.text, pos, f.color.withOpacity(f.t > 0.85 ? (1 - f.t) / 0.15 : 1.0), size,
+          weight: FontWeight.w900, outline: true);
     }
   }
 

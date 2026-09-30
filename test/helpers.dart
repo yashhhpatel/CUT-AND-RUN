@@ -1,4 +1,5 @@
 import 'package:cut_and_run/app/app_services.dart';
+import 'package:cut_and_run/progression/missions.dart';
 import 'package:cut_and_run/progression/progress_store.dart';
 import 'package:cut_and_run/services/ads/ad_service.dart';
 import 'package:cut_and_run/services/audio/audio_service.dart';
@@ -14,14 +15,16 @@ Future<AppServices> testServices([Map<String, Object> prefs = const {}]) async {
   final storage = await StorageService.create();
   final settings = SettingsStore(storage);
   final purchases = PurchaseService.offline(storage);
+  final progress = ProgressStore(storage);
   return AppServices(
     storage: storage,
     settings: settings,
-    progress: ProgressStore(storage),
+    progress: progress,
     audio: AudioService.disabled(settings),
     haptics: HapticsService(settings),
     ads: AdService.disabled(storage, purchases),
     purchases: purchases,
+    missions: MissionStore(storage, progress),
   );
 }
 

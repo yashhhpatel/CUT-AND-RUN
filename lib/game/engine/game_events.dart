@@ -24,6 +24,8 @@ enum GameEventType {
   land,
   crash,
   complete,
+  finishLine,
+  bonusStep,
 }
 
 class GameEvent {

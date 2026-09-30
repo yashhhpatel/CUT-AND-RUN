@@ -9,6 +9,8 @@ A 2D portrait runner for Android built with Flutter. Run → collect → **cut**
 - Specials: energy cells (Cut Chain), mystery boxes, relics (collect them whole), glass membranes.
 - Gates (add, multiply, subtract, quantity, sacrifice, fusion, material, relic, risk, reward, power-up), risk/reward lanes, 13 hazard types, 10 power-ups, combos and "Perfect" actions.
 - 1000 generated campaign levels across 10 worlds, Daily Challenge with streaks, Endless mode, achievements, cosmetics.
+- Finish ladder: after the finish line, spend shards to break ×2…×5 barriers that multiply your coin reward.
+- Daily missions: 3 new missions every day, matched to the player's progress, with coin rewards.
 
 ## Project layout
 ```

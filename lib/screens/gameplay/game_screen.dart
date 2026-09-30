@@ -55,6 +55,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _introVisible = true;
   bool _movedOnce = false;
   int _endlessWorldId = 1;
+  final _shardsKey = GlobalKey();
   late final double _endlessBestBefore;
   late final AppServices _s;
 
@@ -118,6 +119,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _handleEvents();
     _frame.value++;
     if (_frame.value % 3 == 0) _hudTick.value++;
+    if (_frame.value % 30 == 1) _locateShardsCounter();
     // Endless runs travel through the worlds; refresh the visual theme.
     if (widget.config.isEndless && _frame.value % 60 == 0) {
       final id = worldForLevel(EndlessGenerator.levelEquivalent(world.player.y)).id;
@@ -197,11 +199,24 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           audio.play(Sfx.hit);
           h.fire(Haptic.heavy);
         case GameEventType.complete:
+          h.fire(Haptic.medium);
+        case GameEventType.finishLine:
           audio.play(Sfx.complete);
           h.fire(Haptic.heavy);
+        case GameEventType.bonusStep:
+          audio.play(Sfx.coin);
+          audio.play(Sfx.split, volume: 0.6);
+          h.fire(Haptic.medium);
       }
     }
     world.events.clear();
+  }
+
+  void _locateShardsCounter() {
+    final box = _shardsKey.currentContext?.findRenderObject();
+    if (box is RenderBox && box.hasSize) {
+      viewport.hudShardsTarget = box.localToGlobal(box.size.center(Offset.zero));
+    }
   }
 
   // ------------------------------------------------------------------ input
@@ -270,6 +285,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       bestMultiplier: world.bestMultiplier,
       failReason: world.failReason,
     );
+    final done = _s.missions.recordRun(_result!);
+    _result!.missionsCompleted.addAll(done.map((m) => m.text));
   }
 
   Future<void> _continueWithAd() async {
@@ -377,7 +394,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               SafeArea(
                 child: Column(
                   children: [
-                    GameHud(world: world, tick: _hudTick, onPause: _pause),
+                    GameHud(world: world, tick: _hudTick, onPause: _pause, shardsKey: _shardsKey),
                     const SizedBox(height: 16),
                     IntroBanner(world: world, visible: _introVisible && _overlay == _Overlay.none),
                   ],

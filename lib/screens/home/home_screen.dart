@@ -15,6 +15,7 @@ import '../daily/daily_screen.dart';
 import '../endless/endless_screen.dart';
 import '../gameplay/game_screen.dart';
 import '../level_map/level_map_screen.dart';
+import '../missions/missions_screen.dart';
 import '../settings/settings_screen.dart';
 import '../skins/skins_screen.dart';
 
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const Positioned.fill(child: AnimatedBackdrop(top: Color(0xFF1B2250))),
           SafeArea(
             child: ListenableBuilder(
-              listenable: progress,
+              listenable: Listenable.merge([progress, s.missions]),
               builder: (context, _) {
                 final level = progress.unlockedLevel;
                 final world = worldForLevel(level);
@@ -71,6 +72,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           children: [
                             CoinBadge(coins: progress.coins),
                             const Spacer(),
+                            RoundIconButton(
+                              icon: Icons.task_alt_rounded,
+                              tooltip: 'Daily missions',
+                              badge: s.missions.claimable,
+                              onTap: () => _open(const MissionsScreen()),
+                            ),
+                            const SizedBox(width: 10),
                             RoundIconButton(
                               icon: Icons.settings_rounded,
                               tooltip: 'Settings',

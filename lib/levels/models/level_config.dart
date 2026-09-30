@@ -72,6 +72,7 @@ class LevelConfig {
     required this.spawns,
     this.isTutorial = false,
     this.title,
+    this.bonusStepCost = 5,
   });
 
   final int levelId;
@@ -99,6 +100,9 @@ class LevelConfig {
   final List<Spawn> spawns;
   final bool isTutorial;
   final String? title;
+
+  /// Shards paid to break each finish-ladder barrier (×2 … ×5).
+  final int bonusStepCost;
 
   bool get isEndless => mode == GameMode.endless;
 

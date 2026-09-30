@@ -6,6 +6,7 @@ import 'package:cut_and_run/screens/gameplay/game_screen.dart';
 import 'package:cut_and_run/screens/gameplay/overlays.dart';
 import 'package:cut_and_run/screens/home/home_screen.dart';
 import 'package:cut_and_run/screens/level_map/level_map_screen.dart';
+import 'package:cut_and_run/screens/missions/missions_screen.dart';
 import 'package:cut_and_run/screens/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +32,7 @@ void main() {
     expect(find.text('Daily'), findsOneWidget);
     expect(find.text('Endless'), findsOneWidget);
     expect(find.text('SKINS'), findsOneWidget);
+    expect(find.bySemanticsLabel('Daily missions'), findsWidgets);
     expect(find.textContaining('LEVEL 1'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
@@ -98,6 +100,17 @@ void main() {
     expect(find.text('Hit spikes'), findsOneWidget);
     expect(find.text('WATCH AD & CONTINUE'), findsOneWidget);
     expect(find.text('RETRY'), findsOneWidget);
+  });
+
+  testWidgets('daily missions screen lists three missions', (t) async {
+    await phone(t);
+    await t.pumpWidget(wrap(s, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.text('Daily Missions'), findsOneWidget);
+    for (final m in s.missions.missions) {
+      expect(find.text(m.text), findsOneWidget);
+    }
+    expect(find.textContaining('New missions in'), findsOneWidget);
   });
 
   testWidgets('settings toggles persist', (t) async {

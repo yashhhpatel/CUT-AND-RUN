@@ -15,11 +15,14 @@ import '../../widgets/common/game_button.dart';
 /// Compact top HUD: pause, level + progress, score, shards, coins, combo and
 /// active power-ups. Reads the world directly; rebuilt ~20 times a second.
 class GameHud extends StatelessWidget {
-  const GameHud({super.key, required this.world, required this.tick, required this.onPause});
+  const GameHud({super.key, required this.world, required this.tick, required this.onPause, this.shardsKey});
 
   final GameWorld world;
   final Listenable tick;
   final VoidCallback onPause;
+
+  /// Marks the shards counter so flying gate values can target it.
+  final GlobalKey? shardsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -64,15 +67,16 @@ class GameHud extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  _Chip(
+                  _BumpChip(
+                    key: shardsKey,
                     icon: const ShardIcon(size: 18),
-                    text: '${world.carry.shards}',
+                    value: world.carry.shards,
                     semantic: 'Shards',
                   ),
                   const SizedBox(width: 6),
-                  _Chip(
+                  _BumpChip(
                     icon: const CoinIcon(size: 18),
-                    text: '${world.stats.coinsCollected}',
+                    value: world.stats.coinsCollected,
                     semantic: 'Coins',
                   ),
                 ],
@@ -95,26 +99,64 @@ class GameHud extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.text, required this.semantic});
+/// HUD counter that pops and tints green when it rises, red when it drops.
+class _BumpChip extends StatefulWidget {
+  const _BumpChip({super.key, required this.icon, required this.value, required this.semantic});
   final Widget icon;
-  final String text;
+  final int value;
   final String semantic;
+
+  @override
+  State<_BumpChip> createState() => _BumpChipState();
+}
+
+class _BumpChipState extends State<_BumpChip> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+  Color _tint = AppColors.success;
+
+  @override
+  void didUpdateWidget(covariant _BumpChip old) {
+    super.didUpdateWidget(old);
+    if (widget.value != old.value) {
+      _tint = widget.value > old.value ? AppColors.success : AppColors.danger;
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$semantic $text',
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.only(left: 7, right: 11),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.35),
-          borderRadius: BorderRadius.circular(17),
-        ),
+      label: '${widget.semantic} ${widget.value}',
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          final k = _c.isAnimating ? math.sin(_c.value * math.pi) : 0.0;
+          return Transform.scale(
+            scale: 1 + 0.2 * k,
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.only(left: 7, right: 11),
+              decoration: BoxDecoration(
+                color: Color.lerp(Colors.black.withOpacity(0.35), _tint.withOpacity(0.55), k),
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: child,
+            ),
+          );
+        },
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [icon, const SizedBox(width: 6), Text(text, style: AppText.hud.copyWith(fontSize: 15))],
+          children: [
+            widget.icon,
+            const SizedBox(width: 6),
+            Text('${widget.value}', style: AppText.hud.copyWith(fontSize: 15)),
+          ],
         ),
       ),
     );

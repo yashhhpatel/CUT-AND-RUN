@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'app/app.dart';
 import 'app/app_services.dart';
+import 'progression/missions.dart';
 import 'progression/progress_store.dart';
 import 'services/ads/ad_service.dart';
 import 'services/audio/audio_service.dart';
@@ -49,6 +50,7 @@ Future<void> main() async {
     haptics: HapticsService(settings),
     ads: AdService(storage, purchases),
     purchases: purchases,
+    missions: MissionStore(storage, progress),
   );
 
   runApp(CutAndRunApp(services: services));

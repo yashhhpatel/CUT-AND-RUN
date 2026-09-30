@@ -42,6 +42,16 @@ void main() {
     expect(r.coinsEarned, greaterThan(cfg.rewards.baseCoins));
   });
 
+  test('finish bonus multiplies coins from shards', () async {
+    final p1 = ProgressStore(await freshStorage());
+    final r1 = p1.recordRun(
+        config: LevelGenerator.campaign(2), run: goodRun()..bonusMultiplier = 1, completed: true, bestMultiplier: 1);
+    final p5 = ProgressStore(await freshStorage());
+    final r5 = p5.recordRun(
+        config: LevelGenerator.campaign(2), run: goodRun()..bonusMultiplier = 5, completed: true, bestMultiplier: 1);
+    expect(r5.coinsEarned - r1.coinsEarned, (60 ~/ 4) * 4);
+  });
+
   test('failing does not unlock or award stars', () async {
     final p = ProgressStore(await freshStorage());
     final r = p.recordRun(

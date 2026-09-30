@@ -163,6 +163,7 @@ abstract final class LevelGenerator {
       specialMechanics: mechanics,
       spawns: builder.spawns,
       title: title,
+      bonusStepCost: math.max(3, (tally.potentialShards * 0.07).round()),
     );
   }
 
@@ -319,6 +320,7 @@ abstract final class LevelGenerator {
       specialMechanics: mechanicsForLevel(1),
       spawns: s,
       isTutorial: true,
+      bonusStepCost: 3,
     );
   }
 }
