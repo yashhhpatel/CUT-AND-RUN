@@ -40,7 +40,7 @@ No real IDs are committed. For release, pass:
   - Subscription `remove_ads_monthly`: 1 Month Ads-Free, monthly auto-renewing base plan, ₹299
   - In-app product `remove_ads_lifetime`: Lifetime Ads-Free, one-time, ₹2,999
   - Override IDs with `--dart-define=ADS_FREE_MONTHLY_ID=...` / `ADS_FREE_LIFETIME_ID=...`
-- `--dart-define=PRIVACY_URL=https://...` for the hosted privacy policy
+- Privacy policy: https://api.buildprivacypolicy.com/policy/a0ff0b74-0fe6-4fa0-be23-f8444f8ce75a (override with `--dart-define=PRIVACY_URL=...`)
 - Support email (Contact Us) is set in `lib/core/constants/app_config.dart`
 - Release signing: `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`), which is git-ignored.
 

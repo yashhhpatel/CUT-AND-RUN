@@ -5,7 +5,7 @@
 /// flutter build appbundle \
 ///   --dart-define=ADMOB_INTERSTITIAL_ID=ca-app-pub-xxx/yyy \
 ///   --dart-define=ADMOB_REWARDED_ID=ca-app-pub-xxx/zzz \
-///   --dart-define=PRIVACY_URL=https://your-site/privacy
+///   --dart-define=ADS_FREE_MONTHLY_ID=remove_ads_monthly
 abstract final class AppConfig {
   // Google's public test ad units. Safe to ship in debug builds only.
   static const _testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
@@ -25,8 +25,12 @@ abstract final class AppConfig {
   /// when the player leaves the result screen. Never during gameplay.
   static const interstitialEveryNLevels = 3;
 
-  /// Hosted privacy policy. Leave empty to show the built-in summary.
-  static const privacyPolicyUrl = String.fromEnvironment('PRIVACY_URL');
+  /// Hosted privacy policy (opened from Settings). Falls back to the built-in
+  /// summary only if the link cannot be opened.
+  static const privacyPolicyUrl = String.fromEnvironment(
+    'PRIVACY_URL',
+    defaultValue: 'https://api.buildprivacypolicy.com/policy/a0ff0b74-0fe6-4fa0-be23-f8444f8ce75a',
+  );
 
   /// Support address opened by "Contact Us".
   static const supportEmail = 'aakashmangukiya10@gmail.com';
