@@ -17,7 +17,7 @@ class CutAndRunApp extends StatelessWidget {
     return AppScope(
       services: services,
       child: MaterialApp(
-        title: 'Cut & Run',
+        title: 'Slice & Run: Cut Master',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         builder: (context, child) {

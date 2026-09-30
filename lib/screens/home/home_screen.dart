@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 final world = worldForLevel(level);
                 final today = DateTime.now();
                 return LayoutBuilder(builder: (context, c) {
-                  final compact = c.maxHeight < 640;
+                  final compact = c.maxHeight < 700;
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
@@ -79,9 +79,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ],
                         ),
                         const Spacer(flex: 2),
-                        LogoTitle(size: compact ? 58 : 72),
-                        const SizedBox(height: 12),
-                        Text('SLICE  ·  SPLIT  ·  ESCAPE', style: AppText.label.copyWith(letterSpacing: 3)),
+                        LogoTitle(size: compact ? 42 : 66),
+                        if (!compact) ...[
+                          const SizedBox(height: 20),
+                          Text('CUT  ·  SPLIT  ·  ESCAPE', style: AppText.label.copyWith(letterSpacing: 3)),
+                        ],
                         const Spacer(flex: 2),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -125,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               child: _ModeTile(
                                 icon: Icons.map_rounded,
                                 title: 'Levels',
-                                subtitle: '${progress.totalStars} ★',
+                                subtitle: '${progress.totalStars} stars',
                                 color: AppColors.accent,
                                 onTap: () => _open(const LevelMapScreen()),
                               ),

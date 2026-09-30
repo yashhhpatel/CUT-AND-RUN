@@ -1,4 +1,4 @@
-"""Generates the original Cut & Run launcher icons (legacy + adaptive) with Pillow.
+"""Generates the original Slice & Run launcher icons (legacy + adaptive) with Pillow.
 
 Run from repo root: python tool/gen_icons.py
 """

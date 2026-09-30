@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             const LogoTitle(size: 72),
             const SizedBox(height: 22),
-            Text('SLICE  ·  SPLIT  ·  ESCAPE', style: AppText.label.copyWith(letterSpacing: 3)),
+            Text('CUT  ·  SPLIT  ·  ESCAPE', style: AppText.label.copyWith(letterSpacing: 3)),
           ],
         ),
       ),

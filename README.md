@@ -1,4 +1,4 @@
-# Cut & Run
+# Slice & Run: Cut Master
 
 A 2D portrait runner for Android built with Flutter. Run → collect → **cut** → split → avoid → choose → combine → escape → reward.
 

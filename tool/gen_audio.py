@@ -1,4 +1,4 @@
-"""Synthesises every Cut & Run sound effect and music loop from scratch (no samples),
+"""Synthesises every Slice & Run sound effect and music loop from scratch (no samples),
 so all audio is original and free to ship. Requires numpy; ffmpeg converts to OGG.
 
 Run from repo root: python tool/gen_audio.py

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// "CUT & RUN" wordmark: the word CUT is literally sliced in two.
+/// "SLICE & RUN" wordmark: the word SLICE is literally sliced in two,
+/// with a "CUT MASTER" ribbon underneath.
 class LogoTitle extends StatefulWidget {
   const LogoTitle({super.key, this.size = 64, this.animate = true});
   final double size;
@@ -57,13 +58,13 @@ class _LogoTitleState extends State<LogoTitle> with SingleTickerProviderStateMix
               children: [
                 Transform.translate(
                   offset: Offset(-sep, -sep * 0.6),
-                  child: ClipPath(clipper: _HalfClipper(upper: true), child: Text('CUT', style: word)),
+                  child: ClipPath(clipper: _HalfClipper(upper: true), child: Text('SLICE', style: word)),
                 ),
                 Transform.translate(
                   offset: Offset(sep, sep * 0.6),
                   child: ClipPath(
                     clipper: _HalfClipper(upper: false),
-                    child: Text('CUT', style: word.copyWith(color: AppColors.primary)),
+                    child: Text('SLICE', style: word.copyWith(color: AppColors.primary)),
                   ),
                 ),
                 Positioned.fill(child: CustomPaint(painter: _SlashPainter(slash))),
@@ -78,6 +79,34 @@ class _LogoTitleState extends State<LogoTitle> with SingleTickerProviderStateMix
                 SizedBox(width: s * 0.12),
                 Text('RUN', style: word),
               ],
+            ),
+            SizedBox(height: s * 0.14),
+            // "CUT MASTER" ribbon pops in after the slice.
+            Opacity(
+              opacity: ((_c.value - 0.45) / 0.3).clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: 0.85 + 0.15 * Curves.easeOutBack.transform(((_c.value - 0.45) / 0.55).clamp(0.0, 1.0)),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: s * 0.26, vertical: s * 0.07),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(s * 0.14),
+                    boxShadow: const [
+                      BoxShadow(color: AppColors.primaryDark, offset: Offset(0, 4)),
+                    ],
+                  ),
+                  child: Text(
+                    'CUT MASTER',
+                    style: TextStyle(
+                      fontSize: s * 0.27,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: s * 0.05,
+                      height: 1,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         );

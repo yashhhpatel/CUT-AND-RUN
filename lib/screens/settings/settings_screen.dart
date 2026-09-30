@@ -86,7 +86,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _contact() async {
     const email = AppConfig.supportEmail;
-    final uri = Uri(scheme: 'mailto', path: email, query: 'subject=${Uri.encodeComponent('Cut & Run support')}');
+    final uri =
+        Uri(scheme: 'mailto', path: email, query: 'subject=${Uri.encodeComponent('Slice & Run: Cut Master support')}');
     try {
       if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
     } catch (_) {}
@@ -118,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   static const _privacyText =
-      'Cut & Run stores your progress, coins and settings only on this device. We do not run our own servers '
+      'Slice & Run: Cut Master stores your progress, coins and settings only on this device. We do not run our own servers '
       'and do not ask for your name, email or any account.\n\n'
       'Ads are provided by Google AdMob, which may collect device identifiers (such as the advertising ID), IP '
       'address and diagnostic information to show and measure ads, according to your consent choices.\n\n'
@@ -222,7 +223,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _rate,
             ),
             const SizedBox(height: 24),
-            const Text('Cut & Run · v1.0.0', style: AppText.label, textAlign: TextAlign.center),
+            const Text('Slice & Run: Cut Master · v1.0.0', style: AppText.label, textAlign: TextAlign.center),
           ],
         ),
       ),
